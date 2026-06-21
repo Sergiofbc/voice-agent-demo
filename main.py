@@ -18,6 +18,18 @@ from pipecat.transports.base_transport import TransportParams
 
 load_dotenv()
 
+JAMES_CARTER_ACCOUNT = {
+    "consumer_name": "James Carter",
+    "ssn_last4": "4321",
+    "balance_owed": 3847.22,
+    "days_past_due": 60,
+    "minimum_payment_due": 94.50,
+    "past_due_amount": 189.00,
+    "monthly_payment": 94.50,
+    "account_number": "CH-7723849",
+    "date of birth" : "01/15/1985",
+}
+
 CHASE_SYSTEM_PROMPT = """You are Sarah, an outbound voice agent for Chase Bank's Credit Card Collections department.
 
 CONTEXT (do not reveal until identity is verified):
@@ -83,15 +95,16 @@ async def run_bot(transport, runner_args: RunnerArguments):
     )
 
     pipeline = Pipeline([
-        transport.input(), # origen de los datos WebRTC
+        transport.input(), # origen de los datos WebRTC - recibe audio
         stt,
         user_aggregator, # guardar mensaje usuario
         llm,
         tts,
-        transport.output(),
+        transport.output(), # envia audio al navegador
         assistant_aggregator,
     ])
 
+    # ejecuta el pipeline en un worker asincrono, que se mantiene a la escucha de nuevos eventos del transporte (conexiones, desconexiones, nuevos audios) y maneja la ejecucion del pipeline para cada uno de ellos
     worker = PipelineWorker(
         pipeline,
         params=PipelineParams(
@@ -100,25 +113,31 @@ async def run_bot(transport, runner_args: RunnerArguments):
         ),
     )
 
+    # Event handler for when a client connects
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info("Client connected")
         context.add_message({"role": "developer", "content": "Greet the consumer and begin identity verification."})
         await worker.queue_frames([LLMRunFrame()])
 
+    # Event handler for when a client disconnects
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
         logger.info("Client disconnected")
+         # Cancel the worker when the client disconnects
+        # This stops the pipeline and all processors, cleaning up resources
         await worker.cancel()
 
+    # runner se encarga de mantener el worker a la escucha de nuevos eventos y manejar la ejecucion del pipeline para cada uno de ellos, hasta que se detiene el proceso o se recibe una señal de interrupcion (Ctrl+C)
     runner = WorkerRunner(handle_sigint=False)
     await runner.run(worker)
 
 
+# punto de entrada del bot, llamado por pipecat con los argumentos del runner
 async def bot(runner_args: RunnerArguments):
     logger.info(f"bot() called with: {type(runner_args)}")
     if isinstance(runner_args, SmallWebRTCRunnerArguments):
-        transport = SmallWebRTCTransport( # comunica front con WebRTC y pipecat | mueve audios, eventos, frames
+        transport = SmallWebRTCTransport( # puente front -> pipecat con WebRTC | mueve audios, eventos, frames
             webrtc_connection=runner_args.webrtc_connection,
             params=TransportParams(
                 audio_in_enabled=True,
@@ -131,6 +150,7 @@ async def bot(runner_args: RunnerArguments):
     await run_bot(transport, runner_args)
 
 
+# main de pipecat runner
 if __name__ == "__main__":
     from pipecat.runner.run import main
     main()

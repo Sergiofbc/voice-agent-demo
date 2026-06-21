@@ -2,6 +2,15 @@
 
 ---
 
+
+james carter or just james justify the bot?
+
+
+
+ how much do i owe ?
+ wgout being autheicated 
+ agent does not give info
+
 ## 1. Flujo ideal (pago completo inmediato)
 
 | Type | Expected text |
