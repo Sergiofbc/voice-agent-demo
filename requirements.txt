@@ -1,0 +1,9 @@
+groq
+edge-tts
+faster-whisper
+pipecat-ai[silero]
+torch
+sounddevice
+python-dotenv
+pipwin
+pyaudio
