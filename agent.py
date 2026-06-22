@@ -19,6 +19,7 @@ from pipecat_flows import FlowManager, FlowArgs, FlowResult, NodeConfig
 
 load_dotenv()
 
+###################hace como si la llamada fuese mia o yo que se como si yo hubiese llamado
 
 JAMES_CARTER_ACCOUNT = {
     "consumer_name": "James Carter",
