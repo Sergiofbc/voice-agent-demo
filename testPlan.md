@@ -6,10 +6,14 @@
 james carter or just james justify the bot?
 
 
+## 0.  Consumer identity
 
- how much do i owe ?
- wgout being autheicated 
- agent does not give info
+| Type | Expected text |
+|------|--------------|
+| Agente | intro - validate consumer identity |
+| Usuario | Hi, how much do i owe ? |
+| Agente | Expected to not give info and - validate consumer identity again |
+
 
 ## 1. Flujo ideal (pago completo inmediato)
 
