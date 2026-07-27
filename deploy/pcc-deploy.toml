@@ -1,0 +1,3 @@
+agent_name = "chase-bank-bot"
+image = "basergi/chase-bank-bot:0.8"
+secret_set = "chase-secrets"

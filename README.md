@@ -239,7 +239,7 @@ pip install -r requirements.txt
 ### Start the Agent
 
 ```bash
-python main.py
+python bot.py
 ```
 
 ---

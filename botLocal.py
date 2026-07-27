@@ -58,7 +58,7 @@ RULES (never break these):
 
 async def run_bot(transport, runner_args: RunnerArguments):
     stt = WhisperSTTService(
-        model="tiny",  # en vez de "small"
+        model="tiny",  
         device="cpu",
         compute_type="int8",
     )
