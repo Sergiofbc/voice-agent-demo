@@ -1,0 +1,23 @@
+{
+    "Excel": {
+        "Excel no responde, se bloquea o deja de funcionar": "https://support.microsoft.com/es-es/excel/excel-not-responding-hangs-freezes-or-stops-working",
+        "Reparar un libro dañado": "https://support.microsoft.com/es-es/excel/repairing-a-corrupted-workbook",
+        "Restaurar una versión anterior de un archivo de Excel": "https://support.microsoft.com/es-es/excel/restore-a-previous-version-of-an-excel-file",
+        "¿Por qué no puedo editar este archivo?": "https://support.microsoft.com/en-US/Office/collab-files/why-can-t-i-edit-this-file"
+    },
+    "Microsoft Teams": {
+        "Mi cámara no funciona en Microsoft Teams": "https://support.microsoft.com/es-es/teams/meetings/my-camera-isn-t-working-in-microsoft-teams",
+        "Mi Altavoz no funciona en Microsoft Teams": "https://support.microsoft.com/es-es/teams/meetings/my-speaker-isn-t-working-in-microsoft-teams",
+        "El micrófono no funciona en Microsoft Teams": "https://support.microsoft.com/es-es/teams/meetings/my-microphone-isn-t-working-in-microsoft-teams",
+        "No puedo transcribir una reunión en Microsoft Teams": "https://support.microsoft.com/es-es/teams/meetings/i-can-t-transcribe-a-meeting-in-microsoft-teams"
+    },
+    "SharePoint": {
+        "¿Qué es un sitio de grupo de SharePoint?": "https://support.microsoft.com/es-es/sharepoint/sites-in-sharepoint/what-is-a-sharepoint-team-site"
+    },
+    "Microsoft": {
+        "Restablecer una contraseña olvidada de una cuenta de Microsoft": "https://support.microsoft.com/es-es/accounts-billing/manage/reset-a-forgotten-microsoft-account-password",
+        "Ha olvidado el nombre de usuario de su cuenta de Microsoft": "https://support.microsoft.com/es-es/accounts-billing/manage/forgotten-your-microsoft-account-username",
+        "La cuenta de Microsoft se ha bloqueado": "https://support.microsoft.com/es-es/accounts-billing/manage/microsoft-account-has-been-locked",
+        "Cómo cerrar una cuenta de Microsoft": "https://support.microsoft.com/es-es/accounts-billing/manage/how-to-close-your-microsoft-account"
+    }
+}
