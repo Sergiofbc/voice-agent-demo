@@ -2,3 +2,5 @@ voicebot-env/
 __pycache__/
 .env
 *.pyc
+soporte-tecnico/.env
+soporte-tecnico-deploy/.env
