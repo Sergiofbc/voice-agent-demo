@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 soporte-tecnico/.env
 soporte-tecnico-deploy/.env
+soporte-tecnico-deploy/.env.cloud

@@ -1,0 +1,6 @@
+groq
+pipecat-ai[silero,elevenlabs,daily,webrtc]
+pipecat-ai-flows
+pinecone
+python-dotenv
+pipecatcloud

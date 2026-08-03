@@ -1,0 +1,6 @@
+agent_name = "soporte-tecnico-bot"
+secret_set = "soporte-tecnico-secrets"
+
+[build]
+context_dir = "."
+dockerfile = "Dockerfile"

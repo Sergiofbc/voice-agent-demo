@@ -6,11 +6,12 @@ Flujo:
       -> descarga la URL
       -> extrae solo el contenido útil del artículo (descarta menú/footer/encuesta)
       -> trocea el contenido en chunks
-      -> genera embeddings localmente (open source, sin costo de API)
-      -> sube todo a Pinecone
+      -> sube todo a Pinecone, que genera los embeddings (integrated inference,
+         modelo multilingual-e5-large alojado por Pinecone — el bot no calcula
+         ni pide ningún embedding por su cuenta)
 
 Requisitos (instalar una vez):
-    pip install httpx trafilatura sentence-transformers "pinecone[grpc]" tqdm
+    pip install httpx trafilatura "pinecone[grpc]" tqdm
 
 Antes de correr:
     - Crea una cuenta gratis en pinecone.io y pon tu API key abajo (o en variable de entorno).
@@ -26,8 +27,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import httpx
 import trafilatura
-from pinecone import Pinecone, ServerlessSpec
-from sentence_transformers import SentenceTransformer
+from pinecone import Pinecone, IndexEmbed
 from tqdm import tqdm
 
 # ---------------------------------------------------------------------------
@@ -44,9 +44,10 @@ PINECONE_INDEX_NAME = "soporte-ofimatico"
 PINECONE_CLOUD = "aws"
 PINECONE_REGION = "us-east-1"  # región del free tier de Pinecone
 
-# Modelo de embeddings open source, local, gratis.
-# Soporta español, portugués e inglés (y ~50 idiomas más).
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# Modelo de embeddings alojado por Pinecone (integrated inference).
+# Multilingüe (soporta español) y sin necesidad de correr torch/sentence-transformers
+# localmente ni depender de un proveedor de embeddings aparte.
+EMBEDDING_MODEL_NAME = "multilingual-e5-large"
 
 CHUNK_SIZE_PALABRAS = 350
 CHUNK_OVERLAP_PALABRAS = 50
@@ -167,21 +168,7 @@ def trocear(texto: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# 3. Embeddings (open source, corre localmente, sin costo por llamada)
-# ---------------------------------------------------------------------------
-
-print(f"Cargando modelo de embeddings ({EMBEDDING_MODEL_NAME})...")
-modelo_embeddings = SentenceTransformer(EMBEDDING_MODEL_NAME)
-DIMENSION = modelo_embeddings.get_embedding_dimension()
-
-
-def embed(texto: str) -> list[float]:
-    vector = modelo_embeddings.encode(texto, normalize_embeddings=True)
-    return vector.tolist()
-
-
-# ---------------------------------------------------------------------------
-# 4. Pinecone
+# 3. Pinecone (embeddings integrados: Pinecone los genera al hacer upsert/búsqueda)
 # ---------------------------------------------------------------------------
 
 def obtener_o_crear_indice():
@@ -189,12 +176,12 @@ def obtener_o_crear_indice():
 
     nombres_existentes = [i["name"] for i in pc.list_indexes()]
     if PINECONE_INDEX_NAME not in nombres_existentes:
-        print(f"Creando índice '{PINECONE_INDEX_NAME}' (dim={DIMENSION})...")
-        pc.create_index(
+        print(f"Creando índice '{PINECONE_INDEX_NAME}' (modelo={EMBEDDING_MODEL_NAME})...")
+        pc.create_index_for_model(
             name=PINECONE_INDEX_NAME,
-            dimension=DIMENSION,
-            metric="cosine",
-            spec=ServerlessSpec(cloud=PINECONE_CLOUD, region=PINECONE_REGION),
+            cloud=PINECONE_CLOUD,
+            region=PINECONE_REGION,
+            embed=IndexEmbed(model=EMBEDDING_MODEL_NAME, field_map={"text": "texto_embed"}),
         )
         while not pc.describe_index(PINECONE_INDEX_NAME).status["ready"]:
             time.sleep(1)
@@ -221,7 +208,7 @@ def procesar_catalogo(catalogo: dict, indice) -> None:
     }
     """
     lote = []
-    LOTE_MAX = 100  # tamaño de batch para el upsert a Pinecone
+    LOTE_MAX = 96  # límite de max_batch_size del modelo multilingual-e5-large
 
     for producto, casos in catalogo.items():
         for pregunta, url in tqdm(casos.items(), desc=f"Procesando {producto}"):
@@ -239,42 +226,44 @@ def procesar_catalogo(catalogo: dict, indice) -> None:
                 continue
 
             # El primer chunk suele contener el resumen/causa principal;
-            # es lo que se copia como 'content' del vector de título.
+            # es lo que se copia como 'content' del registro de título.
             contenido_principal = chunks[0]
 
-            # Vector de la pregunta en lenguaje natural: el "gancho" de búsqueda.
+            # Registro de la pregunta en lenguaje natural: el "gancho" de búsqueda.
+            # 'texto_embed' es lo que Pinecone realmente vectoriza (la pregunta),
+            # 'content' es lo que se le devuelve al bot (la respuesta) — no es lo mismo.
             lote.append({
-                "id": f"{doc_id}__titulo",
-                "values": embed(pregunta),
-                "metadata": {
-                    "doc_id": doc_id,
-                    "producto": producto,
-                    "tipo": "titulo",
-                    "url": url,
-                    "content": contenido_principal,
-                },
+                "_id": f"{doc_id}__titulo",
+                "texto_embed": pregunta,
+                "doc_id": doc_id,
+                "producto": producto,
+                "tipo": "titulo",
+                "url": url,
+                "content": contenido_principal,
             })
 
-            # Vectores del contenido real, trozo por trozo.
-            for i, chunk in enumerate(chunks):
-                lote.append({
-                    "id": f"{doc_id}__chunk_{i}",
-                    "values": embed(chunk),
-                    "metadata": {
-                        "doc_id": doc_id,
-                        "producto": producto,
-                        "tipo": "contenido",
-                        "url": url,
-                        "content": chunk,
-                    },
-                })
-
             if len(lote) >= LOTE_MAX:
-                indice.upsert(vectors=lote)
+                indice.upsert_records(namespace="kb", records=lote)
                 lote = []
 
+            # Registros del contenido real, trozo por trozo.
+            for i, chunk in enumerate(chunks):
+                lote.append({
+                    "_id": f"{doc_id}__chunk_{i}",
+                    "texto_embed": chunk,
+                    "doc_id": doc_id,
+                    "producto": producto,
+                    "tipo": "contenido",
+                    "url": url,
+                    "content": chunk,
+                })
+
+                if len(lote) >= LOTE_MAX:
+                    indice.upsert_records(namespace="kb", records=lote)
+                    lote = []
+
     if lote:
-        indice.upsert(vectors=lote)
+        indice.upsert_records(namespace="kb", records=lote)
 
 
 if __name__ == "__main__":
