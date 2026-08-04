@@ -466,6 +466,13 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             return
         conversacion_iniciada = True
         logger.info("Cliente conectado")
+        # Espera a que el track de audio del participante termine de negociarse
+        # en WebRTC antes de saludar. Sin esto, el saludo (LLM+TTS, ambos muy
+        # rápidos) se genera y reproduce apenas llega el evento de conexión, que
+        # dispara antes de que el navegador esté realmente suscrito al audio del
+        # bot — el usuario se pierde el saludo y percibe silencio hasta que él
+        # mismo habla primero.
+        await asyncio.sleep(1.5)
         await flow_manager.initialize(crear_nodo_saludo())
 
     @transport.event_handler("on_client_connected")
